@@ -173,6 +173,11 @@
             <div class="header-center">
                 <div class="ticker-divider"></div>
                 <div class="ticker-data">
+                    <span>PRICE</span>
+                    <span id="live-price">LOADING</span>
+                </div>
+                <div class="ticker-divider"></div>
+                <div class="ticker-data">
                     <span>MARKET CAP</span>
                     <span id="live-mc">LOADING</span>
                 </div>
@@ -185,7 +190,7 @@
             </div>
 
             <div class="header-right">
-                <a href="https://x.com/i/communities/2027880617149370732" target="_blank" class="brutalist-button" style="padding: 10px 20px; font-size: 1.2rem; background: white; color: black; border: 4px solid black;">
+                <a href="https://x.com/YOUR_TWITTER_HANDLE" target="_blank" class="brutalist-button" style="padding: 10px 20px; font-size: 1.2rem; background: white; color: black; border: 4px solid black;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 5px; vertical-align: text-bottom;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> X
                 </a>
                 <a href="https://dexscreener.com/solana/J2Brx8stuszu3wjnb2utFNr1UMUdgbTWm7NfixZqpump" target="_blank" class="brutalist-button" style="padding: 10px 20px; font-size: 1.2rem; background: white; color: black; border: 4px solid black;">
@@ -323,25 +328,35 @@
         }
 
         // 4. DEXSCREENER API
-        const SOL_PAIR = "YOUR_PAIR_ADDRESS_HERE"; 
+        const SOL_PAIR = "J2Brx8stuszu3wjnb2utFNr1UMUdgbTWm7NfixZqpump"; 
         async function fetchDex() {
-            if(SOL_PAIR === "YOUR_PAIR_ADDRESS_HERE") return; 
             try {
                 const res = await fetch(`https://api.dexscreener.com/latest/dex/pairs/solana/${SOL_PAIR}`);
                 const data = await res.json();
                 if (data && data.pairs && data.pairs.length > 0) {
                     const p = data.pairs[0];
+                    
+                    // Live Price Update with Memecoin Decimal Formatting
+                    if(p.priceUsd) {
+                        let priceNum = parseFloat(p.priceUsd);
+                        let formattedPrice = priceNum < 0.01 ? "$" + priceNum.toFixed(6) : "$" + priceNum.toFixed(4);
+                        document.getElementById('live-price').innerText = formattedPrice;
+                    }
+
+                    // Market Cap Update
                     if(p.fdv) document.getElementById('live-mc').innerText = "$" + (p.fdv / 1000000).toFixed(2) + "M";
+                    
+                    // 24H Change Update
                     const c24 = p.priceChange.h24;
                     const cEl = document.getElementById('live-change');
                     if (c24 >= 0) { cEl.innerHTML = `▲ ${c24.toFixed(2)}%`; cEl.className = 'positive-change'; } 
                     else { cEl.innerHTML = `▼ ${Math.abs(c24).toFixed(2)}%`; cEl.className = 'negative-change'; }
                 }
-            } catch (err) {}
+            } catch (err) { console.error("Dex API loading error", err); }
         }
-        fetchDex(); setInterval(fetchDex, 30000);
+        fetchDex(); setInterval(fetchDex, 15000); // Updated to poll every 15s for launch hype!
 
-        // 5. SCROLL REVEAL
+        // 5. SCROLL REVEAL (This makes the site visible!)
         document.addEventListener("DOMContentLoaded", () => {
             const obs = new IntersectionObserver((entries, o) => {
                 entries.forEach(e => {
