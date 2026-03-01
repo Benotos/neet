@@ -327,17 +327,22 @@
             });
         }
 
-        // 4. DEXSCREENER API (UPDATED FOR TOKEN CA)
+        // 4. DEXSCREENER API (V1 ENDPOINT)
+        const CHAIN_ID = "solana";
         const TOKEN_CA = "J2Brx8stuszu3wjnb2utFNr1UMUdgbTWm7NfixZqpump"; 
+        
         async function fetchDex() {
             try {
-                // Notice the URL change here: it now searches by /tokens/
-                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${TOKEN_CA}`);
+                // Using the exact v1 endpoint you provided
+                const res = await fetch(`https://api.dexscreener.com/token-pairs/v1/${CHAIN_ID}/${TOKEN_CA}`);
                 const data = await res.json();
                 
-                if (data && data.pairs && data.pairs.length > 0) {
+                // The v1 API returns the pairs as a direct array
+                let pairs = Array.isArray(data) ? data : (data.pairs || []);
+                
+                if (pairs && pairs.length > 0) {
                     // Sort to make sure we get the main pool with the most liquidity
-                    const mainPair = data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
+                    const mainPair = pairs.sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
                     
                     // Live Price Update 
                     if(mainPair.priceUsd) {
@@ -346,7 +351,7 @@
                         document.getElementById('live-price').innerText = formattedPrice;
                     }
 
-                    // Market Cap Update (Checks for FDV or MarketCap depending on what DexScreener provides)
+                    // Market Cap Update 
                     let mcValue = mainPair.fdv || mainPair.marketCap;
                     if(mcValue) {
                         document.getElementById('live-mc').innerText = "$" + (mcValue / 1000000).toFixed(2) + "M";
@@ -367,8 +372,10 @@
                 }
             } catch (err) { console.error("Dex API loading error", err); }
         }
-        fetchDex(); setInterval(fetchDex, 15000);
         
+        fetchDex(); 
+        setInterval(fetchDex, 15000); // Polling every 15s
+
         // 5. SCROLL REVEAL (This makes the site visible!)
         document.addEventListener("DOMContentLoaded", () => {
             const obs = new IntersectionObserver((entries, o) => {
