@@ -327,35 +327,48 @@
             });
         }
 
-        // 4. DEXSCREENER API
-        const SOL_PAIR = "J2Brx8stuszu3wjnb2utFNr1UMUdgbTWm7NfixZqpump"; 
+        // 4. DEXSCREENER API (UPDATED FOR TOKEN CA)
+        const TOKEN_CA = "J2Brx8stuszu3wjnb2utFNr1UMUdgbTWm7NfixZqpump"; 
         async function fetchDex() {
             try {
-                const res = await fetch(`https://api.dexscreener.com/latest/dex/pairs/solana/${SOL_PAIR}`);
+                // Notice the URL change here: it now searches by /tokens/
+                const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${TOKEN_CA}`);
                 const data = await res.json();
+                
                 if (data && data.pairs && data.pairs.length > 0) {
-                    const p = data.pairs[0];
+                    // Sort to make sure we get the main pool with the most liquidity
+                    const mainPair = data.pairs.sort((a, b) => b.liquidity.usd - a.liquidity.usd)[0];
                     
-                    // Live Price Update with Memecoin Decimal Formatting
-                    if(p.priceUsd) {
-                        let priceNum = parseFloat(p.priceUsd);
+                    // Live Price Update 
+                    if(mainPair.priceUsd) {
+                        let priceNum = parseFloat(mainPair.priceUsd);
                         let formattedPrice = priceNum < 0.01 ? "$" + priceNum.toFixed(6) : "$" + priceNum.toFixed(4);
                         document.getElementById('live-price').innerText = formattedPrice;
                     }
 
-                    // Market Cap Update
-                    if(p.fdv) document.getElementById('live-mc').innerText = "$" + (p.fdv / 1000000).toFixed(2) + "M";
+                    // Market Cap Update (Checks for FDV or MarketCap depending on what DexScreener provides)
+                    let mcValue = mainPair.fdv || mainPair.marketCap;
+                    if(mcValue) {
+                        document.getElementById('live-mc').innerText = "$" + (mcValue / 1000000).toFixed(2) + "M";
+                    }
                     
                     // 24H Change Update
-                    const c24 = p.priceChange.h24;
-                    const cEl = document.getElementById('live-change');
-                    if (c24 >= 0) { cEl.innerHTML = `▲ ${c24.toFixed(2)}%`; cEl.className = 'positive-change'; } 
-                    else { cEl.innerHTML = `▼ ${Math.abs(c24).toFixed(2)}%`; cEl.className = 'negative-change'; }
+                    if(mainPair.priceChange && mainPair.priceChange.h24 !== undefined) {
+                        const c24 = mainPair.priceChange.h24;
+                        const cEl = document.getElementById('live-change');
+                        if (c24 >= 0) { 
+                            cEl.innerHTML = `▲ ${c24.toFixed(2)}%`; 
+                            cEl.className = 'positive-change'; 
+                        } else { 
+                            cEl.innerHTML = `▼ ${Math.abs(c24).toFixed(2)}%`; 
+                            cEl.className = 'negative-change'; 
+                        }
+                    }
                 }
             } catch (err) { console.error("Dex API loading error", err); }
         }
-        fetchDex(); setInterval(fetchDex, 15000); // Updated to poll every 15s for launch hype!
-
+        fetchDex(); setInterval(fetchDex, 15000);
+        
         // 5. SCROLL REVEAL (This makes the site visible!)
         document.addEventListener("DOMContentLoaded", () => {
             const obs = new IntersectionObserver((entries, o) => {
